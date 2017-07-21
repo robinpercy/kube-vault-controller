@@ -20,6 +20,7 @@ type Controller struct {
 type Config struct {
 	Namespace  string
 	SyncPeriod time.Duration
+	TokenFile  string
 }
 
 func New(config *Config, vconfig *vaultapi.Config, kconfig *rest.Config) (*Controller, error) {
@@ -31,7 +32,7 @@ func New(config *Config, vconfig *vaultapi.Config, kconfig *rest.Config) (*Contr
 	if err != nil {
 		return nil, err
 	}
-	vaultController, err := vault.NewController(vconfig, kconfig)
+	vaultController, err := vault.NewController(config.TokenFile, vconfig, kconfig)
 	if err != nil {
 		return nil, err
 	}

@@ -13,6 +13,8 @@ import (
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"io/ioutil"
+	"encoding/json"
 )
 
 const (
@@ -22,6 +24,8 @@ const (
 
 	PKICertificateKey = "certificate"
 	PKIPrivateKeyKey  = "private_key"
+
+	clientTokenKey    = "clientToken"
 )
 
 type controller struct {
@@ -29,8 +33,17 @@ type controller struct {
 	kclient *kubernetes.Clientset
 }
 
-func NewController(vconfig *vaultapi.Config, kconfig *rest.Config) (kube.SecretClaimManager, error) {
+func NewController(tokenFile string, vconfig *vaultapi.Config, kconfig *rest.Config) (kube.SecretClaimManager, error) {
 	vclient, err := vaultapi.NewClient(vconfig)
+
+	if len(tokenFile) > 0 {
+		token, err := extractToken(tokenFile)
+		if err != nil {
+			return nil, err
+		}
+		vclient.SetToken(token)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -43,6 +56,34 @@ func NewController(vconfig *vaultapi.Config, kconfig *rest.Config) (kube.SecretC
 		vclient: vclient,
 		kclient: kclient,
 	}, nil
+}
+
+func extractToken(tokenFile string) (string, error) {
+	jsonBytes, err := ioutil.ReadFile(tokenFile)
+
+	if err != nil {
+		return "", fmt.Errorf("Error reading token file at '%s': %v", tokenFile, err)
+	}
+
+	type TokenDesc struct {
+		ClientToken string
+		Accessor string
+		LeaseDuration int
+		Renewable bool
+		ValueAddr string
+	}
+
+	t := &TokenDesc{}
+	err = json.Unmarshal(jsonBytes, t)
+	if err != nil {
+		return "", fmt.Errorf("Error unmarshalling token at '%s': %v", tokenFile, err)
+	}
+
+	if t.ClientToken == "" {
+		return "", fmt.Errorf("Token at key '%s' in file '%s' was empty", clientTokenKey, tokenFile)
+	}
+
+	return t.ClientToken, nil
 }
 
 func (ctrl *controller) CreateOrUpdateSecret(claim *kube.SecretClaim, force bool) error {

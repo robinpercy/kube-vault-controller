@@ -16,6 +16,7 @@ var (
 	apiserver  = flag.String("apiserver", "", "(optional) Kubernetes apiserver url.")
 	kubeconfig = flag.String("kubeconfig", "", "Path to the kubeconfig file. Defaults to in-cluster config.")
 	namespace  = flag.String("namespace", "", "Namespace to watch for claims.")
+	tokenPath  = flag.String("tokenfile", "", "Path to token file")
 
 	syncPeriod = flag.Duration("sync-period", 0, "Sync all resources each period.")
 )
@@ -29,6 +30,7 @@ func main() {
 	}
 
 	vconfig := vault.DefaultConfig()
+
 	err := vconfig.ReadEnvironment()
 	if err != nil {
 		panic(err.Error())
@@ -45,6 +47,7 @@ func main() {
 	config := &controller.Config{
 		Namespace:  *namespace,
 		SyncPeriod: *syncPeriod,
+		TokenFile:  *tokenPath,
 	}
 	ctrl, err := controller.New(config, vconfig, kconfig)
 	if err != nil {

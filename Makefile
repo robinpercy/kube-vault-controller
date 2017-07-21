@@ -1,6 +1,6 @@
-TAG     := $(shell git describe --tags --abbrev=0 HEAD)
+TAG     := 3
 PKGS    := $(shell go list ./... | grep -v /vendor/)
-PREFIX  := quay.io/roboll
+PREFIX  := robinpercy
 
 generate:
 	go generate ${PKGS}
